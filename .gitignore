@@ -1,0 +1,8 @@
+.idea/
+.pytest_cache/
+__pycache__/
+.venv/
+output/
+raw-data/clickstream/
+raw-data/order/
+raw-data/product/
