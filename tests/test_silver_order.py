@@ -18,7 +18,7 @@ def test_latest_status_excludes_returns_and_counts_created_items_once(spark):
     # A repeated delivered record must not add the price again.
     data.append(data[4])
     bronze = transform_order(spark.createDataFrame(data, ORDER_SCHEMA))
-    products = spark.createDataFrame([(10, "Hırka", "female"), (10, "Hırka", "male")],
+    products = spark.createDataFrame([(10, "Cardigan", "female"), (10, "Cardigan", "male")],
                                      "productId long, categoryName string, gender string")
     rows = calculate_net_gross(bronze.join(products, "productId")).collect()
     assert len(rows) == 2

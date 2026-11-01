@@ -6,7 +6,7 @@ def test_json_to_gold_pipeline(spark, tmp_path, monkeypatch, pipeline_directory)
     """Run all seven jobs with raw JSON and verify both final contracts."""
     monkeypatch.chdir(tmp_path)
     raw = {
-        "product": [{"productId": 10, "categoryName": "Hırka", "gender": ["female", "male"]}],
+        "product": [{"productId": 10, "categoryName": "Cardigan", "gender": ["female", "male"]}],
         "clickstream": [
             {"user_id": 1, "product_id": 10, "event": "impression", "platform": "web",
              "sid": "session", "timestamp": timestamp}

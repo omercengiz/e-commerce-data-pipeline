@@ -7,8 +7,8 @@ def test_enrich_clickstream_joins_product_with_gender(spark):
     ])
 
     product = spark.createDataFrame([
-        Row(productId=10, categoryName="Hırka", gender="female"),
-        Row(productId=10, categoryName="Hırka", gender="male"),
+        Row(productId=10, categoryName="Cardigan", gender="female"),
+        Row(productId=10, categoryName="Cardigan", gender="male"),
     ])
 
     from src.jobs.silver_clickstream import enrich_clickstream
@@ -18,5 +18,5 @@ def test_enrich_clickstream_joins_product_with_gender(spark):
 
     assert len(rows) == 2
     assert set(r.gender for r in rows) == {"female", "male"}
-    assert all(r.categoryName == "Hırka" for r in rows)
+    assert all(r.categoryName == "Cardigan" for r in rows)
     assert all(r.userId == 1 for r in rows)

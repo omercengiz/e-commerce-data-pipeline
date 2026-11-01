@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 
 
-def get_spark(app_name: str = "E-Ticaret-case") -> SparkSession:
+def get_spark(app_name: str = "E-Commerce-case") -> SparkSession:
     """
     Create and return a SparkSession configured for local development.
     """

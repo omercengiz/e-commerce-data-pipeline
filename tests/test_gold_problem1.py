@@ -12,9 +12,9 @@ def events(user, category, days, gender="female"):
 
 
 def test_active_days_differ_from_calendar_days_and_keep_old_users(spark):
-    data = events(1, "Hırka", [("2023-10-01", 8), ("2023-10-05", 2),
+    data = events(1, "Cardigan", [("2023-10-01", 8), ("2023-10-05", 2),
                               ("2023-10-10", 4), ("2023-10-11", 6)])
-    data += events(2, "Babet", [("2023-11-01", 3)])
+    data += events(2, "Ballet Flats", [("2023-11-01", 3)])
     rows = {r.userId: r for r in calculate_click_averages(spark.createDataFrame(data)).collect()}
     assert set(rows) == {1, 2}
     assert rows[1].last3DayAverageClickCount == pytest.approx(10 / 3)
@@ -32,7 +32,7 @@ def test_top_categories_are_five_per_user_with_deterministic_ties(spark):
 
 
 def test_orderless_categories_get_zero_order_metrics(spark):
-    clicks = calculate_click_averages(spark.createDataFrame(events(1, "Hırka", [("2023-10-20", 3)])))
+    clicks = calculate_click_averages(spark.createDataFrame(events(1, "Cardigan", [("2023-10-20", 3)])))
     orders = spark.createDataFrame([], "userId long, categoryName string, gender string, netPrice double, grossItemCount long, grossOrderCount long")
     row = build_problem1_output(clicks, orders).first()
     assert (row.netPrice, row.grossItemCount, row.grossOrderCount) == (0.0, 0, 0)

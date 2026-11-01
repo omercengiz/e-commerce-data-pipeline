@@ -1,116 +1,114 @@
-# E-Ticaret Data Engineering Case Study
+# E-Commerce Data Engineering Case Study
 
-Diyagramlarda Data Pipeline’larını görüyorsunuz. Sizden beklentimiz;
+The diagram below shows the data pipeline. The task is to write batch Spark applications using data from the file system.
 
-- Dosya sistemindeki verileri kullanarak batch Spark uygulamaları yazmanız.
-  
-<img src="image/batch.png" alt="drawing" width="400"/><br />
+<img src="image/batch.png" alt="Batch Spark pipeline from file system input to file system output" width="400"/><br />
 
 ## Data
 
-Clickstream, Order ve Product verileri üzerinde çalışacaksınız. Bu verilere `/raw-data` dizininde ulaşabilirsiniz.
+You will work with Clickstream, Order, and Product data, available in the `/raw-data` directory.
 
 ### **Clickstream**
 
-- Bir `user`'ın unique `user_id`’si olurken her 30 dk değişen `sid(session_id)`’si vardır.
-- Bir `user`'a ait birden fazla `event` olabilir, aynı şekilde bir `product <product_id>`'a ait birden fazla event olabilir.
-- `Event`’in alabileceği değerler aşağıdaki gibidir:
+- Each `user` has a unique `user_id` and a `sid` (session ID) that changes every 30 minutes.
+- A user can generate multiple events, and a product (`product_id`) can have multiple events.
+- `event` can have the following values:
     - impression
     - add_to_fav
     - add_to_basket
     - purchase
-- `Platform`’un alabileceği değerler aşağıdaki gibidir:
+- `platform` can have the following values:
     - ios
     - android
     - web
     - mweb
 
-
 ```json
 {
-  "user_id":3234019,        // User'ların unique id'leri
-  "platform":"ios",         // User'ların device bilgisi: ios | android | web | mweb
-  "product_id":16350963,    // Product'ların unique id'leri 
-  "event":"impression",     // User'ın ilgili product için attığı event: impression | add_to_fav | add_to_basket | puchase
-  "sid":"b5d2e908b0de1090", // User'ların unique session id'leri
-  "timestamp":1697490000000 // Event'in gerçekleştiği zaman
+  "user_id":3234019,        // Unique user ID
+  "platform":"ios",         // User device platform: ios | android | web | mweb
+  "product_id":16350963,    // Unique product ID
+  "event":"impression",     // User event for the product: impression | add_to_fav | add_to_basket | purchase
+  "sid":"b5d2e908b0de1090", // Unique session ID
+  "timestamp":1697490000000 // Time of the event
 }
 ```
 
 ### Order
 
-Sipariş verisine ait dikkat edimesi gerekenler ve örnek bir sipariş aşağıdaki gibidir.
+The following rules apply to order data. An example order record is shown below.
 
-- Bir `itemId` birden fazla `orderId`’ye sahip olamaz.
-- Bir `orderId` en az bir `itemId`’ye sahiptir.
-- Bir `productId`’nin birden fazla `itemId`’si olabilir.
-    - Örneğin, bir ürünün 2 adet `itemId`’si varsa bu üründen 2 adet almış demektir.
-- Bir `itemId`’nin birden fazla `status`’ü olabilir.
-- `statusCreatedDate` bir `itemId`’nin `status`’ünün oluşturulma tarihidir.
-- Bir `status` aşağıdaki değerlere sahip olabilir:
-    - `CREATED` : Siparişin oluşturulması
-    - `DELIVERED` : Ürünün kullanıcıya teslim edimesi
-    - `CANCELLED` : Ürünün iptal edilmesi
-    - `RETURN_ACCEPTED` : Ürünün iade edilmesi
-- Bir `Item`'ın status geçmişi aşağıdaki gibi olabilir
-    - Bir sipariş oluşturulmuş olmalıdır.
-    - Bir sipariş oluşturulduktan sonra teslim edilmiş veya iptal edilmiş olabilir.
-    - Bir sipariş teslim edildikten sonra iade edilebilir.
+- An `itemId` cannot belong to more than one `orderId`.
+- An `orderId` has at least one `itemId`.
+- A `productId` can have multiple `itemId` values.
+    - For example, two item IDs for a product indicate that two units of that product were purchased.
+- An `itemId` can have multiple statuses.
+- `statusCreatedDate` is the time when a status was created for an `itemId`.
+- `status` can have the following values:
+    - `CREATED`: The order was created.
+    - `DELIVERED`: The item was delivered to the user.
+    - `CANCELLED`: The item was cancelled.
+    - `RETURN_ACCEPTED`: The item was returned.
+- An item's status history follows these rules:
+    - An order must first be created.
+    - After creation, an order can be delivered or cancelled.
+    - After delivery, an order can be returned.
 
 ```json
 {
-  "orderId": 5678526598,             // Siparişin id'si
-  "userId": 52659,                   // Kullanıcı id'si
-  "orderDate": 1697749603808,        // Siparişin oluşturulma tarihi
-  "price": 299.99,                   // Satılan ürünün fiyatı.
-  "itemId": 23455265982,             // Satılan ürünün id'si
-  "productId": 11719478,             // Satılan ürünün ürün id'si
-  "statusCreatedDate": 1697894266529,// Satılan ürünün ilgili statüsünün oluşturma tarihi
-  "status": "DELIVERED"              // Satılan ürünün statüsü 
+  "orderId": 5678526598,             // Order ID
+  "userId": 52659,                   // User ID
+  "orderDate": 1697749603808,        // Order creation time
+  "price": 299.99,                   // Price of the purchased item
+  "itemId": 23455265982,             // Purchased item ID
+  "productId": 11719478,             // Product ID of the purchased item
+  "statusCreatedDate": 1697894266529,// Time when the item's status was created
+  "status": "DELIVERED"              // Item status
 }
 ```
 
 ### **Product**
 
-Ürün verisi bir ürünün bilgilerini içerir. Veri product id bazında tekildir. Ürün birden fazla cinsiyet bilgisine sahip olabilir.
+Product data contains information about each product and is unique by product ID. A product can be associated with multiple genders.
 
 ```json
 {
-  "productId": 8441421,          // Ürünün id'si
-  "categoryName": "Hırka",      // Ürünün kategorisinin ismi
-  "gender": ["female", "male"]  // Ürünün cinsiyet bilgisi.
+  "productId": 8441421,          // Product ID
+  "categoryName": "Cardigan",   // Product category name
+  "gender": ["female", "male"]  // Genders associated with the product
 }
 ```
 
 ## Batch Processing
 
-Kullanıcıların E-Ticaret uygulamasındaki verilerini kullanılarak kullanıcılara ait *E-Ticaret Journey* oluşturmak istiyoruz.
+We want to build each user's *E-Commerce Journey* using their activity in the e-commerce application.
 
 ### Problem-1
 
-Her bir kullanıcının en çok **clickstream** eventi oluşturduğu ilk 5 category için;
+For each user's top five categories by **clickstream** event count, calculate:
 
-- **Event oluşturduğu** son 3 günün event sayısının ortalamasını
-- En son eventinden itibaren, son 3 günün event sayısının ortalaması
-- Net harcadığı para
-- Brüt satın aldığı ürün sayısı
-- Brüt sipariş sayısı
+- The average event count over the last three days **on which the user generated events**.
+- The average event count over the last three calendar days, ending on the user's latest event date.
+- Net amount spent.
+- Gross number of items purchased.
+- Gross number of orders.
 
-*Not:* Eğer bir `item`’ın `status`’u iptal veya iade ile sonuçlandıysa net hesaplarken kullanmıyoruz.
+*Note:* Exclude items whose final status is cancelled or returned when calculating net spending.
 
-*Not:* Brüt hesabı yapmak için bir `itemId`’nin oluşturulması yeterlidir.
+*Note:* Creating an `itemId` is sufficient for it to count toward gross metrics.
 
 **Input**
 
-Input için order, clickstream ve product verilerini kullanacağız.
+Use the order, clickstream, and product data.
 
 **Output**
 
-Sonucu aşağıdaki gibi *JSON* formatında yazmanızı bekliyoruz.
+Write the results in *JSON* format as shown below.
+
 ```json
 {
 "userId": 12222222,                           // Long
-"categoryName": "Hırka",                      // String
+"categoryName": "Cardigan",                  // String
 "gender": "female",                           // String
 "last3DayAverageClickCount": 3.50,            // Double
 "lastInteracted3DayAverageClickCount": 3.40,  // Double
@@ -122,27 +120,27 @@ Sonucu aşağıdaki gibi *JSON* formatında yazmanızı bekliyoruz.
 
 ### Problem-2
 
-Kullanıcıların E-Ticaret uygulamasını kullanma sıklıklıklarını analiz etmek istiyoruz. Bu hedef doğrultusunda kullanıcıların arka arkaya girdiği günlerin her birini bir küme olarak düşünürsek,  clickstream verisini kullanarak aşağıdakileri hesaplamak istiyoruz.
+We want to analyze how frequently users interact with the e-commerce application. Treat each run of consecutive active days as a cluster and use clickstream data to calculate:
 
-- Her küme için event sayılarının ortalaması
-- En büyük kümenin gün sayısı
-- Kümelerin içindeki günlerin event sayılarının değişim ortalaması
+- The average daily event count for each cluster.
+- The number of days in the largest cluster.
+- The average change in daily event counts within each cluster.
 
-*Note*: Kümeleri içerisinde bulunan ilk günün tarihiyle isimlendiriyoruz.
+*Note:* Name each cluster using the date of its first day.
 
-*Peş Peşe günler:* Gün bazında ardı ardına E-Ticaret’da geçirdiği günlerdir. Aşağıdaki örnekte sadece **mor** ve **kırmızı** renkte olan tarihler peş peşe olan günlerdir.
+*Consecutive days:* Successive calendar days on which a user was active in the e-commerce application. In the example below, only the dates shown in **purple** and **red** form runs of consecutive days.
 
-<img src="image/pespesegunler.png" alt="drawing" width="400"/><br />
+<img src="image/consecutive_days.png" alt="Consecutive active days grouped into purple and red clusters" width="400"/><br />
 
-*Not:* Bir kullanıcının istediğimiz metriklerden herhangi birisine sahip değilse, o kullanıcının metriklerinin hesaplanmasını istemiyoruz.
+*Note:* If any required metric is unavailable for a user, exclude that user from the results.
 
 **Input**
 
-Input için clickstream verisini kullanacağız. Burada bulunan her tekil satır, bir kullanıcının uygulamada oluşturduğu bir eventtir.
+Use the clickstream data. Each row represents an event generated by a user in the application.
 
 **Output**
 
-Sonucu aşağıdaki gibi *JSON* formatında yazmanızı bekliyoruz.
+Write the results in *JSON* format as shown below.
 
 ```json
 {
@@ -154,14 +152,14 @@ Sonucu aşağıdaki gibi *JSON* formatında yazmanızı bekliyoruz.
 }
 ```
 
-## Değerlendirme Kriterlerimiz
+## Evaluation Criteria
 
-- Performans
+- Performance
 - Type Safety
-- Kod Kalitesi
-- Sonuçlar
-- Testler
-- Dokümantasyon
+- Code Quality
+- Results
+- Tests
+- Documentation
 
 ## Calculation rules and assumptions
 
@@ -313,12 +311,12 @@ Validation after the calculation fixes:
 
 ## Verified sample output
 
-The records below were generated from the sampled original data after the fixes.
+The records below were generated from the sampled original data after the fixes. The Problem 1 category label is translated into English for display; pipeline outputs preserve the source category names.
 
 Problem 1:
 
 ```json
-{"categoryName": "Casual Ayakkabı", "gender": "female", "grossItemCount": 0, "grossOrderCount": 0, "last3DayAverageClickCount": 0.3333333333333333, "lastInteracted3DayAverageClickCount": 1.0, "netPrice": 0.0, "userId": 85}
+{"categoryName": "Casual Shoes", "gender": "female", "grossItemCount": 0, "grossOrderCount": 0, "last3DayAverageClickCount": 0.3333333333333333, "lastInteracted3DayAverageClickCount": 1.0, "netPrice": 0.0, "userId": 85}
 ```
 
 Problem 2:
